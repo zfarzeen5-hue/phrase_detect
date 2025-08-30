@@ -23,14 +23,31 @@ RANDOM_SEED = 1337
 np.random.seed(RANDOM_SEED)
 
 # ---------------- Audio / DSP helpers ----------------
-def load_audio(file, target_sr=DEFAULT_SR):
-    """Load audio as mono float32 at target_sr (WAV/FLAC/OGG preferred)."""
-    y, sr = librosa.load(file, sr=target_sr, mono=True)
-    # mild RMS normalization for stability (prevents wildly different levels)
+def load_audio(file, target_sr=16000):
+    """
+    SoundFile-only loader (WAV/FLAC/OGG). Works on Python 3.13 because it
+    avoids audioread/aifc. If you need MP3/M4A, use Option A instead.
+    """
+    import soundfile as sf
+    import numpy as np
+    import librosa
+
+    # Works with BytesIO from Streamlit uploader
+    y, sr = sf.read(file, dtype="float32", always_2d=False)
+
+    if y.ndim > 1:  # downmix to mono
+        y = y.mean(axis=1)
+
+    if sr != target_sr:
+        y = librosa.resample(y, orig_sr=sr, target_sr=target_sr)
+        sr = target_sr
+
     rms = np.sqrt(np.mean(y**2) + 1e-10)
     if rms > 0:
         y = np.clip(y / (rms * 10.0), -1.0, 1.0)
+
     return y.astype(np.float32), sr
+
 
 def ms_to_samples(ms, sr):
     return int(round((ms/1000.0) * sr))
@@ -453,3 +470,4 @@ if run and template_file and target_file:
             st.warning(f"Could not compute metrics: {e}")
 
     st.caption(f"Computed in {time.time() - t0:.2f} s | stride={stride_s:.2f}s | template={templ_len_s:.2f}s | SR={sr} Hz")
+
