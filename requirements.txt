@@ -1,0 +1,7 @@
+streamlit>=1.36
+librosa==0.10.2.post1
+soundfile>=0.12.1
+numpy==1.26.4
+scipy>=1.11
+matplotlib>=3.7
+pandas>=2.1
